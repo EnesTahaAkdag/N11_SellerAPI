@@ -39,9 +39,7 @@ namespace N11_SellerAPI.Controllers
 				var store = await connection.QuerySingleOrDefaultAsync<StoreModel>(selectQuery);
 
 				if (store == null)
-				{
 					return NotFound(new { success = false, message = "Rastgele URL Bulunamadı" });
-				}
 
 				const string updateQuery = @"
                     UPDATE [N11_SellerInfos].[dbo].[Stores]
@@ -63,9 +61,6 @@ namespace N11_SellerAPI.Controllers
 			}
 		}
 
-
-
-
 		[HttpPost("SellerMarketInformation")]
 		public async Task<IActionResult> SellerMarketInformation([FromBody] SellerMarketInformationModel model)
 		{
@@ -73,6 +68,9 @@ namespace N11_SellerAPI.Controllers
 			{
 				if (model == null)
 					return BadRequest(new { success = false, ErrorMessage = "Veriler Boş Geldi" });
+
+				if (string.IsNullOrEmpty(model.ProductCount) && string.IsNullOrEmpty(model.Category))
+					return BadRequest(new { success = true, message = "Mağzada ürün yok", errors = ModelState });
 
 				if (!ModelState.IsValid)
 					return BadRequest(new { success = false, message = "Geçersiz veri.", errors = ModelState });
@@ -87,44 +85,33 @@ namespace N11_SellerAPI.Controllers
 				if (!string.IsNullOrEmpty(model.StoreScore))
 				{
 					if (decimal.TryParse(model.StoreScore, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal storeScoreValue))
-					{
+
 						dataControl.StoreScore = decimal.Parse((storeScoreValue).ToString("N1", new CultureInfo("tr-TR")));
-					}
 					else
-					{
 						return BadRequest(new { success = false, message = "StoreScore değeri geçersiz." });
-					}
 				}
 
 				if (!string.IsNullOrEmpty(model.RatingScore))
 				{
 					if (decimal.TryParse(model.RatingScore, NumberStyles.Any, CultureInfo.InvariantCulture, out decimal ratingScoreValue))
-					{
-						dataControl.RatingScore = ratingScoreValue * 20.0m;
-					}
+						dataControl.RatingScore = decimal.Parse((ratingScoreValue).ToString("N1", new CultureInfo("tr-TR")));
 					else
-					{
 						return BadRequest(new { success = false, message = "RatingScore değeri geçersiz." });
-					}
 				}
 
 				var turkishCulture = new CultureInfo("tr-TR");
 				var ratingCountMatch = Regex.Match(model.RatingCount, "\\d+");
+
 				if (!ratingCountMatch.Success)
-				{
 					return BadRequest(new { success = false, message = "RatingCount içerisinden sayı alınamadı." });
-				}
 				dataControl.RatingCount = int.Parse(ratingCountMatch.Value, turkishCulture);
 
 				model.ProductCount = model.ProductCount.Replace(",", "");
+
 				if (int.TryParse(model.ProductCount, NumberStyles.Any, turkishCulture, out int productCountValue))
-				{
 					dataControl.ProductCount = productCountValue;
-				}
 				else
-				{
 					return BadRequest(new { success = false, message = "ProductCount değeri geçersiz." });
-				}
 
 				await _context.SaveChangesAsync();
 				return Ok(new { success = true, message = "Mağaza Bilgileri Başarıyla Kaydedildi" });
@@ -174,9 +161,7 @@ namespace N11_SellerAPI.Controllers
 				dataControl.Mersis = string.IsNullOrEmpty(mersisValue) ? null : mersisValue;
 			}
 			else if (string.IsNullOrWhiteSpace(model.Mersis))
-			{
 				dataControl.Mersis = null;
-			}
 
 			if (!string.IsNullOrWhiteSpace(model.Phone) && model.Phone.StartsWith("Satıcı’nın Telefonu:"))
 			{
@@ -184,9 +169,12 @@ namespace N11_SellerAPI.Controllers
 				dataControl.Phone = string.IsNullOrEmpty(phoneValue) ? null : phoneValue;
 			}
 			else if (string.IsNullOrWhiteSpace(model.Phone))
-			{
 				dataControl.Phone = null;
-			}
+
+			if (!string.IsNullOrWhiteSpace(model.Email) && model.Email.StartsWith("Satıcı E-Posta Adresi:"))
+				dataControl.Email = model.Email.Replace("Satıcı E-Posta Adresi:", "").Trim();
+			else if (string.IsNullOrWhiteSpace(model.Email))
+				dataControl.Email = null;
 
 			try
 			{

@@ -25,7 +25,7 @@ public partial class N11_SellerInfosContext : DbContext
             entity.Property(e => e.Mersis)
                 .HasMaxLength(50)
                 .IsUnicode(false);
-            entity.Property(e => e.Phone).HasMaxLength(20);
+            entity.Property(e => e.Phone).HasMaxLength(15);
             entity.Property(e => e.RatingScore).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.SellerName).HasMaxLength(500);
             entity.Property(e => e.StoreLink)
